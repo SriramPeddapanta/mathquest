@@ -6,10 +6,11 @@ import { useUserStore } from "@/store/useUserStore";
 import { AnimatedButton, Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Timer, Star, Puzzle, ChevronLeft, RotateCcw, Home, X } from "lucide-react";
+import { Timer, Star, Puzzle, ChevronLeft, RotateCcw, Home, X, Trophy } from "lucide-react";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import confetti from "canvas-confetti";
 
 type MatchCard = {
   id: string;
@@ -45,10 +46,14 @@ export default function MatchingGame() {
   const [board, setBoard] = useState<MatchCard[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [mistakeIds, setMistakeIds] = useState<string[]>([]);
+  const [hasAwarded, setHasAwarded] = useState(false);
+  const [boostMsg, setBoostMsg] = useState<string | null>(null);
+  const [endMsg, setEndMsg] = useState<string>("Time's Up!");
 
   useEffect(() => {
     if (status === "playing" && board.length === 0) {
       setBoard(generateBoard());
+      setHasAwarded(false);
     }
   }, [status, board.length]);
 
@@ -61,16 +66,31 @@ export default function MatchingGame() {
 
   // Handle Game Over
   useEffect(() => {
-    if (timeLeft === 0 && status === "playing") {
-      endGame();
+    if (status === "game_over" && !hasAwarded) {
+      setHasAwarded(true);
       const earnedXP = Math.floor(score / 5);
       const earnedCoins = Math.floor(score / 20);
-      addXP(earnedXP);
-      addCoins(earnedCoins);
-      incrementStreak();
-      if (score >= 300) unlockAchievement("master_matcher");
+      
+      if (score > 0) {
+        addXP(earnedXP);
+        addCoins(earnedCoins);
+        incrementStreak();
+        if (score >= 300) unlockAchievement("master_matcher");
+
+        const endMsgs = ["Incredible!", "What a run!", "Super Speed!", "Amazing!", "Unstoppable!"];
+        setEndMsg(endMsgs[Math.floor(Math.random() * endMsgs.length)]);
+
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#a855f7', '#8b5cf6', '#fbbf24', '#f472b6']
+        });
+      } else {
+        setEndMsg("Keep practicing!");
+      }
     }
-  }, [timeLeft, status, endGame, score, addXP, addCoins, incrementStreak, unlockAchievement]);
+  }, [status, hasAwarded, score, addXP, addCoins, incrementStreak, unlockAchievement]);
 
   const handleCardClick = (card: MatchCard) => {
     if (status !== "playing" || card.isMatched || selectedIds.length >= 2 || selectedIds.includes(card.id)) return;
@@ -84,13 +104,17 @@ export default function MatchingGame() {
 
       if (card1.matchId === card2.matchId && card1.type !== card2.type) {
         // Match found!
+        const boosts = ["Great job!", "Awesome!", "You're a star!", "Keep it up!", "Math Wizard!"];
+        setBoostMsg(boosts[Math.floor(Math.random() * boosts.length)]);
+        
         setTimeout(() => {
           setBoard(prev => prev.map(c => 
             newSelected.includes(c.id) ? { ...c, isMatched: true } : c
           ));
           setSelectedIds([]);
           addScore(20);
-        }, 300);
+          setBoostMsg(null);
+        }, 600);
       } else {
         // No match
         setMistakeIds(newSelected);
@@ -145,8 +169,9 @@ export default function MatchingGame() {
       <div className="flex-1 flex flex-col items-center justify-center p-6 bg-slate-50">
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-md">
           <Card className="text-center overflow-hidden border-0 shadow-2xl">
-            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-8 text-white">
-              <h2 className="text-4xl font-black mb-2">Time's Up!</h2>
+            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-8 text-white relative">
+              <Trophy className="w-16 h-16 mx-auto mb-4 text-purple-200 fill-purple-200" />
+              <h2 className="text-4xl font-black mb-2">{endMsg}</h2>
               <div className="text-6xl font-black drop-shadow-md">{score}</div>
               <div className="text-purple-200 font-bold uppercase tracking-wider mt-1">Total Score</div>
             </div>
@@ -205,7 +230,22 @@ export default function MatchingGame() {
         </div>
       </header>
 
-      <Progress value={(timeLeft / 60) * 100} className="h-2 bg-slate-200" indicatorClassName={timeLeft <= 10 ? "bg-red-500" : "bg-purple-500"} />
+      <div className="relative">
+        <AnimatePresence>
+          {boostMsg && (
+            <motion.div
+              initial={{ y: 0, opacity: 0, scale: 0.8 }}
+              animate={{ y: -20, opacity: 1, scale: 1 }}
+              exit={{ y: -40, opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.4 }}
+              className="absolute left-1/2 -translate-x-1/2 -top-12 whitespace-nowrap text-xl font-black text-purple-500 bg-purple-50 px-4 py-1 rounded-full border border-purple-200 shadow-sm z-10"
+            >
+              {boostMsg} ✨
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <Progress value={(timeLeft / 60) * 100} className="h-2 bg-slate-200" indicatorClassName={timeLeft <= 10 ? "bg-red-500" : "bg-purple-500"} />
+      </div>
 
       {/* Board */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-4">

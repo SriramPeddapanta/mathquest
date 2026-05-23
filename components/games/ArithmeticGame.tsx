@@ -6,8 +6,11 @@ import { useUserStore } from "@/store/useUserStore";
 import { AnimatedButton, Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { Timer, Star, Zap, ChevronLeft, RotateCcw, Home, Flame, X, Lightbulb, HelpCircle } from "lucide-react";
+import { Timer, Star, Zap, ChevronLeft, RotateCcw, Home, Flame, X, Lightbulb, HelpCircle, Trophy } from "lucide-react";
 import Link from "next/link";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import confetti from "canvas-confetti";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +40,9 @@ export function ArithmeticGame({
   const [inputStr, setInputStr] = useState("");
   const [feedback, setFeedback] = useState<"none" | "correct" | "wrong">("none");
   const [showHelp, setShowHelp] = useState(false);
+  const [hasAwarded, setHasAwarded] = useState(false);
+  const [boostMsg, setBoostMsg] = useState<string | null>(null);
+  const [endMsg, setEndMsg] = useState<string>("Time's Up!");
 
   // Timer logic
   useEffect(() => {
@@ -47,18 +53,40 @@ export function ArithmeticGame({
     return () => clearInterval(timer);
   }, [status, decrementTime]);
 
+  // Reset award status on new game
+  useEffect(() => {
+    if (status === "playing") {
+      setHasAwarded(false);
+    }
+  }, [status]);
+
   // Handle Game Over
   useEffect(() => {
-    if (timeLeft === 0 && status === "playing") {
-      endGame();
+    if (status === "game_over" && !hasAwarded) {
+      setHasAwarded(true);
       const earnedXP = Math.floor(score / 10);
       const earnedCoins = Math.floor(score / 50);
-      addXP(earnedXP);
-      addCoins(earnedCoins);
-      incrementStreak();
-      if (score >= 500) unlockAchievement("speed_demon");
+      
+      if (score > 0) {
+        addXP(earnedXP);
+        addCoins(earnedCoins);
+        incrementStreak();
+        if (score >= 500) unlockAchievement("speed_demon");
+
+        const endMsgs = ["Incredible!", "What a run!", "Super Speed!", "Amazing!", "Unstoppable!"];
+        setEndMsg(endMsgs[Math.floor(Math.random() * endMsgs.length)]);
+
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#38bdf8', '#818cf8', '#fbbf24', '#f472b6']
+        });
+      } else {
+        setEndMsg("Keep practicing!");
+      }
     }
-  }, [timeLeft, status, endGame, score, addXP, addCoins, incrementStreak, unlockAchievement]);
+  }, [status, hasAwarded, score, addXP, addCoins, incrementStreak, unlockAchievement]);
 
   const handleInput = useCallback((val: string) => {
     if (status !== "playing") return;
@@ -71,11 +99,16 @@ export function ArithmeticGame({
       setFeedback("correct");
       addScore(10);
       increaseMultiplier();
+      
+      const boosts = ["Great job!", "Awesome!", "You're a star!", "Keep it up!", "Math Wizard!"];
+      setBoostMsg(boosts[Math.floor(Math.random() * boosts.length)]);
+      
       setTimeout(() => {
         setQuestion(generateQuestion());
         setInputStr("");
         setFeedback("none");
-      }, 300);
+        setBoostMsg(null);
+      }, 600);
     } else if (newInput.length >= String(question.answer).length) {
       // Wrong
       setFeedback("wrong");
@@ -152,8 +185,9 @@ export function ArithmeticGame({
       <div className="flex-1 flex flex-col items-center justify-center p-6 bg-slate-50">
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-md">
           <Card className="text-center overflow-hidden border-0 shadow-2xl">
-            <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-8 text-white">
-              <h2 className="text-4xl font-black mb-2">Time's Up!</h2>
+            <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-8 text-white relative">
+              <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-200 fill-yellow-200" />
+              <h2 className="text-4xl font-black mb-2">{endMsg}</h2>
               <div className="text-6xl font-black drop-shadow-md">{score}</div>
               <div className="text-orange-100 font-bold uppercase tracking-wider mt-1">Total Score</div>
             </div>
@@ -301,16 +335,32 @@ export function ArithmeticGame({
             </motion.div>
           </AnimatePresence>
 
-          <motion.div
-            animate={
-              feedback === "wrong" ? { x: [-10, 10, -10, 10, 0], color: "#ef4444" } :
-              feedback === "correct" ? { scale: [1, 1.1, 1], color: "#10b981" } :
-              { color: "#334155" }
-            }
-            className="h-20 flex items-center justify-center text-6xl font-black border-b-4 border-slate-300 mx-12 pb-2"
-          >
-            {inputStr || <span className="text-slate-300 animate-pulse">?</span>}
-          </motion.div>
+          <div className="relative">
+            <AnimatePresence>
+              {boostMsg && (
+                <motion.div
+                  initial={{ y: 20, opacity: 0, scale: 0.8 }}
+                  animate={{ y: -40, opacity: 1, scale: 1 }}
+                  exit={{ y: -60, opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.4 }}
+                  className="absolute left-1/2 -translate-x-1/2 -top-4 whitespace-nowrap text-xl font-black text-emerald-500 bg-emerald-50 px-4 py-1 rounded-full border border-emerald-200 shadow-sm z-10"
+                >
+                  {boostMsg} ✨
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            <motion.div
+              animate={
+                feedback === "wrong" ? { x: [-10, 10, -10, 10, 0], color: "#ef4444" } :
+                feedback === "correct" ? { scale: [1, 1.1, 1], color: "#10b981" } :
+                { color: "#334155" }
+              }
+              className="h-20 flex items-center justify-center text-6xl font-black border-b-4 border-slate-300 mx-12 pb-2 relative z-0"
+            >
+              {inputStr || <span className="text-slate-300 animate-pulse">?</span>}
+            </motion.div>
+          </div>
           
           {/* Combo Indicator */}
           <div className="h-8">
