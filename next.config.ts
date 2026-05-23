@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   // If deployed to a subpath on GitHub Pages, e.g. https://username.github.io/repo-name/
-  basePath: '/mathquest',
+  // basePath: '/repo-name',
 };
 
 export default nextConfig;
