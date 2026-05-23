@@ -11,8 +11,6 @@ import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
-import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
 
 interface ArithmeticGameProps {
   title: string;
