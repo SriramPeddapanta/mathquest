@@ -3,6 +3,8 @@ import { persist } from "zustand/middleware";
 import { User } from "@/types";
 
 interface UserStore extends User {
+  playerName: string | null;
+  setPlayerName: (name: string) => void;
   addXP: (amount: number) => void;
   addCoins: (amount: number) => void;
   spendCoins: (amount: number) => boolean;
@@ -14,6 +16,7 @@ interface UserStore extends User {
 export const useUserStore = create<UserStore>()(
   persist(
     (set, get) => ({
+      playerName: null,
       xp: 0,
       level: 1,
       coins: 0,
@@ -21,6 +24,8 @@ export const useUserStore = create<UserStore>()(
       maxStreak: 0,
       lastPlayedDate: null,
       unlockedAchievements: [],
+
+      setPlayerName: (name) => set({ playerName: name }),
 
       addXP: (amount) =>
         set((state) => {

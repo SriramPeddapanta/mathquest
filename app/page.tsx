@@ -7,20 +7,26 @@ import { Progress } from "@/components/ui/progress";
 import { Flame, Trophy, Coins, Star, Gamepad2, Play } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { ClientOnly } from "@/components/ClientOnly";
+import { PlayerOnboarding } from "@/components/PlayerOnboarding";
 
 export default function Dashboard() {
-  const { xp, level, coins, currentStreak, unlockedAchievements } = useUserStore();
+  const { playerName, xp, level, coins, currentStreak, unlockedAchievements } = useUserStore();
 
   const xpForNextLevel = level * 1000;
   const xpProgress = (xp / xpForNextLevel) * 100;
 
   return (
-    <div className="flex-1 p-6 md:p-10 max-w-5xl mx-auto w-full flex flex-col gap-8">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">MathQuest</h1>
-          <p className="text-slate-500 font-medium text-lg">Welcome back! Ready for a challenge?</p>
-        </div>
+    <ClientOnly>
+      <PlayerOnboarding />
+      <div className="flex-1 p-6 md:p-10 max-w-5xl mx-auto w-full flex flex-col gap-8">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">MathQuest</h1>
+            <p className="text-slate-500 font-medium text-lg">
+              {playerName ? `Welcome back, ${playerName}!` : "Welcome back! Ready for a challenge?"}
+            </p>
+          </div>
         <div className="flex gap-4">
           <div className="bg-orange-100 text-orange-600 px-4 py-2 rounded-2xl flex items-center gap-2 font-bold shadow-sm">
             <Flame className="w-5 h-5 fill-orange-500" />
@@ -168,5 +174,6 @@ export default function Dashboard() {
         </div>
       </section>
     </div>
+    </ClientOnly>
   );
 }
