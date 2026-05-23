@@ -68,8 +68,8 @@ export default function MatchingGame() {
   useEffect(() => {
     if (status === "game_over" && !hasAwarded) {
       setHasAwarded(true);
-      const earnedXP = Math.floor(score / 5);
-      const earnedCoins = Math.floor(score / 20);
+      const earnedXP = score;
+      const earnedCoins = Math.floor(score / 10);
       
       if (score > 0) {
         addXP(earnedXP);
