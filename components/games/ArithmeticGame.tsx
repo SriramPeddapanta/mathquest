@@ -35,12 +35,30 @@ export function ArithmeticGame({
   const { addXP, addCoins, incrementStreak, unlockAchievement } = useUserStore();
 
   const [question, setQuestion] = useState(generateQuestion());
+  const [options, setOptions] = useState<number[]>([]);
   const [inputStr, setInputStr] = useState("");
   const [feedback, setFeedback] = useState<"none" | "correct" | "wrong">("none");
   const [showHelp, setShowHelp] = useState(false);
   const [hasAwarded, setHasAwarded] = useState(false);
   const [boostMsg, setBoostMsg] = useState<string | null>(null);
   const [endMsg, setEndMsg] = useState<string>("Time's Up!");
+
+  // Generate options when question changes
+  useEffect(() => {
+    const ans = question.answer;
+    const newOptions = [ans];
+    while (newOptions.length < 4) {
+      const offset = Math.floor(Math.random() * 21) - 10; // -10 to +10
+      const distractor = ans + offset;
+      if (distractor >= 0 && !newOptions.includes(distractor)) {
+        newOptions.push(distractor);
+      } else if (distractor < 0) {
+        const posDistractor = ans + Math.floor(Math.random() * 10) + 1;
+        if (!newOptions.includes(posDistractor)) newOptions.push(posDistractor);
+      }
+    }
+    setOptions(newOptions.sort(() => Math.random() - 0.5));
+  }, [question]);
 
   // Timer logic
   useEffect(() => {
@@ -86,13 +104,12 @@ export function ArithmeticGame({
     }
   }, [status, hasAwarded, score, addXP, addCoins, incrementStreak, unlockAchievement]);
 
-  const handleInput = useCallback((val: string) => {
+  const handleOptionClick = useCallback((val: number) => {
     if (status !== "playing") return;
     
-    const newInput = inputStr + val;
-    setInputStr(newInput);
+    setInputStr(val.toString());
 
-    if (parseInt(newInput) === question.answer) {
+    if (val === question.answer) {
       // Correct
       setFeedback("correct");
       addScore(10);
@@ -107,7 +124,7 @@ export function ArithmeticGame({
         setFeedback("none");
         setBoostMsg(null);
       }, 600);
-    } else if (newInput.length >= String(question.answer).length) {
+    } else {
       // Wrong
       setFeedback("wrong");
       resetMultiplier();
@@ -116,20 +133,7 @@ export function ArithmeticGame({
         setFeedback("none");
       }, 400);
     }
-  }, [inputStr, status, question.answer, addScore, increaseMultiplier, resetMultiplier, generateQuestion]);
-
-  // Keyboard support
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key >= "0" && e.key <= "9") {
-        handleInput(e.key);
-      } else if (e.key === "Backspace") {
-        setInputStr(prev => prev.slice(0, -1));
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleInput]);
+  }, [status, question.answer, addScore, increaseMultiplier, resetMultiplier, generateQuestion]);
 
   const handleQuit = () => {
     if (window.confirm("Are you sure you want to quit? You will lose your current score.")) {
@@ -371,36 +375,19 @@ export function ArithmeticGame({
         </div>
       </Card>
 
-      {/* Numpad */}
-      <div className="grid grid-cols-3 gap-3 pb-4">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+      {/* Options Grid */}
+      <div className="grid grid-cols-2 gap-4 pb-4">
+        {options.map((opt) => (
           <AnimatedButton
-            key={num}
+            key={opt}
             variant="outline"
             size="lg"
-            className="h-16 text-3xl font-black text-slate-700 bg-white border-b-4 hover:bg-slate-50 active:border-b-0 active:translate-y-1"
-            onClick={() => handleInput(num.toString())}
+            className="h-20 text-4xl font-black text-slate-700 bg-white border-b-4 hover:bg-sky-50 active:border-b-0 active:translate-y-1"
+            onClick={() => handleOptionClick(opt)}
           >
-            {num}
+            {opt}
           </AnimatedButton>
         ))}
-        <div />
-        <AnimatedButton
-          variant="outline"
-          size="lg"
-          className="h-16 text-3xl font-black text-slate-700 bg-white border-b-4 hover:bg-slate-50 active:border-b-0 active:translate-y-1"
-          onClick={() => handleInput("0")}
-        >
-          0
-        </AnimatedButton>
-        <AnimatedButton
-          variant="outline"
-          size="lg"
-          className="h-16 text-xl font-bold text-slate-500 bg-slate-100 border-b-4 hover:bg-slate-200 active:border-b-0 active:translate-y-1"
-          onClick={() => setInputStr(prev => prev.slice(0, -1))}
-        >
-          DEL
-        </AnimatedButton>
       </div>
     </div>
   );
